@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fiszki – test</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:24px;background:#0b1220;color:#e5e7eb}
+    .wrap{max-width:900px;margin:0 auto}
+    .card{background:#111827;border:1px solid #243047;border-radius:16px;padding:18px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button{background:#1f2937;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 14px;cursor:pointer}
+    button:hover{background:#273449}
+    .muted{color:#94a3b8}
+    .answers li{margin:6px 0}
+    .green{color:#22c55e;font-weight:700}
+    .tag{display:inline-block;padding:2px 10px;border:1px solid #334155;border-radius:999px;font-size:12px;color:#cbd5e1}
+    .hr{height:1px;background:#243047;margin:14px 0}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Fiszki – test</h2>
+  <div class="muted">Zielone na rewersie = poprawne. Jeśli brak poprawnej: wszystkie zielone + etykieta „BRAK POPRAWNEJ”.</div>
+
+  <div class="hr"></div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div>
+        <span class="tag" id="counter">0/0</span>
+        <span class="tag" id="modeTag">TRYB: FISZKA</span>
+      </div>
+      <div class="muted">klawisze: [spacja]=odpowiedź, [←/→]=poprzednia/następna</div>
+    </div>
+
+    <h3 id="qTitle" style="margin-top:12px"></h3>
+    <ul class="answers" id="qAnswers"></ul>
+
+    <div id="back" style="display:none;margin-top:12px">
+      <div class="hr"></div>
+      <div id="special" class="muted" style="margin-bottom:8px"></div>
+      <ul class="answers" id="aAnswers"></ul>
+    </div>
+
+    <div class="row">
+      <button id="toggle">Pokaż odpowiedź</button>
+      <button id="next">Następna</button>
+      <button id="prev">Poprzednia</button>
+      <button id="shuffle">Losuj kolejność</button>
+      <button id="reset">Reset kolejności</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Deep clone kompatybilny z iOS/Safari:
+ * - jeśli structuredClone jest dostępne, użyje go
+ * - jeśli nie, użyje JSON (wystarcza dla tej tablicy obiektów)
+ */
+function deepClone(obj){
+  if (typeof structuredClone === "function") return structuredClone(obj);
+  return JSON.parse(JSON.stringify(obj));
+}
+
+/**
+ * Dane fiszek:
+ * correct: tablica indeksów poprawnych odpowiedzi (0=a,1=b,...)
+ * noneCorrect: true -> BRAK POPRAWNEJ (na rewersie wszystkie zielone + etykieta)
+ */
+const cardsOriginal = [
+  {
+    "q": "Klasyfikacja ryzyka — wskaż prawidłowe powiązania (klasa zagrożenia, działanie = rodzaj ryzyka)",
+    "opts": [
+      "Teleinfrastruktura; podsłuch linii = ryzyko aktywne",
+      "Wykonanie programów, infekcja wirusowa = ryzyko pasywne",
+      "Nośnik informacji; podmiana nośnika = ryzyko pasywne",
+      "Centrum komputerowe; pożar = ryzyko aktywne"
+    ],
+    "correct": [0,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Straty w wyniku pojawienia się potencjalnego incydentu determinują działania zabezpieczające. Wskaż prawidłowe ich przyporządkowanie dla systemów komputerowych (czego tyczą = typ strat)",
+    "opts": [
+      "Zawartość plików = bezpośrednie niematerialne",
+      "Utrata kontaktów = pośrednie materialne",
+      "Utrata marki = pośrednie materialne",
+      "Łącza komunikacyjne = bezpośrednie niematerialne"
+    ],
+    "correct": [0,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Do zasad projektowania mechanizmów ochrony informacji wg. Saltzera i Schroedera należy:",
+    "opts": [
+      "Mechanizm jawności projektu (np. algorytmy szyfrowania)",
+      "Mechanizm największego zbioru niezbędnych praw dostępu",
+      "Mechanizm największego uprzywilejowania",
+      "Mechanizm sumowania przywilejów"
+    ],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Wskaż cechę charakteryzującą audyt (typu) drugiej strony:",
+    "opts": [
+      "Audyt wg. Normy ISO 27001 (?)",
+      "Audyt wykonywany wobec klientów firmy",
+      "Audyt wykonywany przez niezależną jednostkę certyfikującą",
+      "Audyt wykonywany przez dostawców firmy //powinno być przez zleceniodawce"
+    ],
+    "correct": [3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Implementacja poprawna bezpieczeństwa polega na:",
+    "opts": [
+      "Stosowaniu wielu warstw zabezpieczeń",
+      "Określeniu najsłabszego ogniwa ochranianego systemu",
+      "Inwigilacji pracowników",
+      "Nie dążeniu do 100% zabezpieczeń zasobów // bo nie da się mieć 100% zabezpieczen"
+    ],
+    "correct": [0,1,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Sabotaż komputerowy jest typem zagrożenia polegającym na:",
+    "opts": [
+      "Wprowadzeniu błędnej informacji do systemu //zalezy czy celowo no i jest to uznawane za forme ataku wiec niewiadomo",
+      "Skanowaniu infrastruktury teleinformatyczneJ",
+      "Podsłuch infrastruktury teleinformatycznej",
+      "Nieuprawnionej zmianie informacji w systemie"
+    ],
+    "correct": [0,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Wskaż który z protokołów realizuje funkcje warstwy 3 modelu ISO/OSI",
+    "opts": ["UDP","TCP","OSPF","IP"],
+    "correct": [2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Wskaż prawidłową informację dotyczącą wirusów polimorficznych:",
+    "opts": [
+      "Infekują jedynie pliki systemowe",
+      "Nie powielają się",
+      "Powielają się dokładnie w kopiach infekujących komputery sieciowe",
+      "Zawierają dekryptor"
+    ],
+    "correct": [3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Wskaż kryteria cechujące poprawny audyt:",
+    "opts": ["Zależność","Drobiazgowość","Systematyczność","Udokumentowanie"],
+    "correct": [1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Listy kontrolne w procesie audytu to:",
+    "opts": [
+      "Lista osób kontrolujących obszary SZBI",
+      "Lista audytu",
+      "Lista kryteriów",
+      "Lista audytowanych działów firmy"
+    ],
+    "correct": [2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Do kategorii zagrożeń podsłuchiwanie i przechwytywanie danych należą podatności związane z:",
+    "opts": [
+      "Brakiem monitorowania obciążenia serwerów",
+      "Brakiem szkoleń wstępnych dla pracowników nowozatrudnionych",
+      "Brakiem szyfrowania na łączach WAN",
+      "Pozyskiwaniem informacji z nośników wycofanych z użycia"
+    ],
+    "correct": [2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "SZBI swoim działaniem obejmuje:",
+    "opts": [
+      "Zabezpieczenia fizyczne",
+      "Zarządzanie incydentami",
+      "Działania w obszarze zgodności z prawem",
+      "Zarządzanie zasobami ludzkimi"
+    ],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "System bezpieczeństwa powinien posiadać elementy:",
+    "opts": ["Element reaktywny","Element realny","Element proaktywny","Element ryzyka"],
+    "correct": [0,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Szacowanie ryzyka wg. Normy PN-ISO/IEC 27005:2014 polega na:",
+    "opts": ["Ocenie ryzyka","Identyfikacji ryzyka","Likwidacji ryzyka","Analizie ryzyka"],
+    "correct": [0,1,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Według normy PN-l-13335 występują związki elementów zarządzania ryzykiem polegające na:",
+    "opts": [
+      "Posiadana informacja w systemie nie wpływa na wartość ryzyka",
+      "Zagrożenie zwiększa ryzyko, które wpływa na wartość posiadanej informacji",
+      "Podatność zwiększa wartość ryzyka, które wymusza implementację zabezpieczenia",
+      "Implementacje zabezpieczeń redukują podatności systemu"
+    ],
+    "correct": [1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Dopuszczalne wielkości opóźnień dla sieci naziemnych przesyłających usługę głosu to:",
+    "opts": ["Jednokierunkowo 250ms","Jednokierunkowo 200ms","Jednokierunkowo 150ms","Jednokierunkowo 200ms"],
+    "correct": [2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "QoS definiowane jest jako:",
+    "opts": [
+      "Efekt sprawności wykonywania usługi, wyznaczony poziomem zadowolenia użytkownika // to jest najblizsze definicji",
+      "Efekt sprawności wykonywania usługi, wyznaczony poziomem zadowolenia operatora",
+      "Globalny efekt wykonania usługi",
+      "Lokalny efekt wykonania usługi"
+    ],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Parametry QoS opracowane przez ISO:",
+    "opts": ["Opóźnienie tranzytowe","Opóźnienie komutacji","Opóźnienie transmisji","Opóźnienie zestawienia połączeń"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zasada integracji (QOS):",
+    "opts": [
+      "Zapewnia pełną jakość usługi (End to End)",
+      "Jest przewidywalna w efektach działania //to cel stosowania QoS, a nie definicja zasady integracji.",
+      "QoS musi być nie konfigurowalne",
+      "Synchronizuje strumienie wykonawcze"
+    ],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Do specyfikacji QoS może należeć:",
+    "opts": ["Zasada wielodostępu czasowego","Koszt usługi","Poziom obsługi","Zasada separacji"],
+    "correct": [1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Szeregowanie strumienia usługi należy do:",
+    "opts": ["Zasad tworzenia QoS","Parametrów QoS wg. ISO","Mechanizmów dostarczania QoS","Specyfikacji QoS"],
+    "correct": [2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zarządzanie warstwą fizyczną w 802.11 jest realizowane między innymi poprzez dobór:",
+    "opts": ["FHSS (2GFSK)","DSSS (FM)","OFDM (QAM)","OFDM (2GFSK)"],
+    "correct": [2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zarządzanie jakością QoS w standardzie 802.11 jest określone w:",
+    "opts": ["802.11d","802.11e","802.11f","802.11g"],
+    "correct": [1],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zarządzanie bezpieczeństwem w standardzie 802.11 jest realizowane przez:",
+    "opts": ["Autoryzacje WEP","Szyfrowanie WPA","EAP [znane potocznie jako RADIUS]","SEP"],
+    "correct": [2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zarządzanie bezpieczeństwem sieci informatycznej może być realizowane za pomocą:",
+    "opts": [
+      "Portów na poziome warstwy 3 modelu ISO/OSI",
+      "Adresów MAC warstwy 1 modelu ISO/OSI",
+      "Adresów IP warstwy 3 ISO/OSI",
+      "Adresów IP warstwy 4 ISO/OSI"
+    ],
+    "correct": [2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Niezagrożony system posiada elementy:",
+    "opts": ["Element reaktywny","Element realny","Element proaktywny","Element ryzyka"],
+    "correct": [0,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Dobre praktyki bezpieczeństwa polegają na:",
+    "opts": ["Inwigilacji pracowników","Warstwowym systemie zabezpieczeń","Nie dążeniu do 100% bezpieczeństwa","Określeniu najsłabszego ogniwa systemu"],
+    "correct": [1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Czym zajmuję się kryptologia:",
+    "opts": ["Kryptografia","Kryptoanaliza"],
+    "correct": [0,1],
+    "noneCorrect": false
+  },
+  {
+    "q": "Czym zajmuje się Kryptoanaliza:",
+    "opts": ["Metodami łamania szyfrów"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Czym zajmuje się kryptografia:",
+    "opts": ["Utajnionym zapisem informacji"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "System kryptograficzny posiada następujące cechy:",
+    "opts": ["Poufność","Autentyfikację","Niezaprzeczalność nadania","Dostarczenie informacji"],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Która z norm nie dotyczy informatyki:",
+    "opts": ["22000 — bezpieczeństwo żywności"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Wirusy polimorficzne",
+    "opts": ["Posiadają dekryptor","Dzielą się"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Bezpieczeństwo jako ciągły proces:",
+    "opts": ["Monitorowanie Testowanie Ulepszanie Zabezpieczenie"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Dane wrażliwe według ustawy dotyczą:",
+    "opts": ["Stanu zdrowia","Kodu genetycznego","Nałogów","Życia seksualnego"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Entropia w teorii informacji jest:",
+    "opts": ["Nieujemna","Maksymalna, gdy prawdopodobieństwa zdarzeń są takie same","Jest równa O, gdy stany systemów przyJmują wartości tylko O lub tylko 1"],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zadania do wykonania w procesie audytu informatycznego:",
+    "opts": ["Zapoznanie się z audytowanym obszarem","Szczegółowe planowanie audytu","Przeprowadzenie szczegółowych prac audytowych","Ocena zaplanowanych i przewidzianych mechanizmów"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Cechy audytu:",
+    "opts": ["Systematyczny","Niezależny","Udokumentowany"],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Kanał z zniekształceniami:",
+    "opts": ["Informacja","Subiektywizm przekazu informacji","Informacja zniekształcona"],
+    "correct": [1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "RSA— Jaki klucz ma nadawca i odbiorca:",
+    "opts": ["Nadawca - publiczny","Odbiorca — tajny przy deszyfrowaniu"],
+    "correct": [0,1],
+    "noneCorrect": false
+  },
+  {
+    "q": "Normy SZBI: PN-ISO/IEC 27001",
+    "opts": ["Technika informatyczna Techniki bezpieczeństwa Systemy zarządzania bezpieczeństwem informacji Wymagania"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Normy SZBI: PN-ISO/IEC 17799 (ISO 27002)",
+    "opts": ["Technika informatyczna Techniki bezpieczeństwa -> Praktyczne zasady zarządzania bezpieczeństwem informacji"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Ataki pasywne polegają na:",
+    "opts": ["Podsłuchiwaniu lub monitorowaniu przesyłania","Celem osoby atakującej jest odkrycie treści komunikatu"],
+    "correct": [0,1],
+    "noneCorrect": false
+  },
+  {
+    "q": "Ataki pasywne dzielą się na (dwa typy):",
+    "opts": ["Odkrycie treści komunikatu","Analiza przesyłu"],
+    "correct": [0,1],
+    "noneCorrect": false
+  },
+  {
+    "q": "Ataki aktywne polegają na:",
+    "opts": ["Modyfikowaniu strumienia danych lub tworzeniu danych fałszywych"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Ataki aktywne dzielą się na (cztery typy):",
+    "opts": ["Maskarada","Powtórka","Modyfikacja komunikatów","Blokowanie działania"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Atrybuty bezpieczeństwa informacji to:",
+    "opts": ["Poufność","Integralność","Dostępność"],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Rodzaje list kontrolnych to:",
+    "opts": ["Lista kryteriów","Lista audytów"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Klasyfikacja informacji:",
+    "opts": ["Poufne","Do użytku wewnętrznego","Publiczne"],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Norma BS 25999",
+    "opts": ["System zarządzania ciągłością działania"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Norma ISO/IEC 27005",
+    "opts": ["Zarządzanie ryzykiem w systemie informacji"],
+    "correct": [0],
+    "noneCorrect": false
+  },
+  {
+    "q": "Rodzaje audytów",
+    "opts": ["Audyt pierwszej strony (wewnętrzny)","Audyt drugiej strony","Audyt trzeciej strony"],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  },
+  {
+    "q": "Zagadnienia będące przedmiotem naszych rozważań mają punkty styczności z takimi dziedzinami jak np.:",
+    "opts": ["Niezawodność","Analiza ryzyka","Przestępczość komputerowa","Kryptologia"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Fundamentalne reguły socjotechniczne:",
+    "opts": ["Reguła wzajemności","Reguła konsekwencji","Reguła dowodu społecznego","Reguła sympatii"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Słabe punkty systemy obiegu informacji:",
+    "opts": ["Zbiory","Urządzenia","Oprogramowanie","Operator"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Entropia w teorii informacji:",
+    "opts": ["Miara nieokreślona","Chaotyczność","Stopień nieuporządkowania","Stan nieuporządkowania"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Informacje poufne:",
+    "opts": ["Informacje o realizowanych kontraktach","Informacje finansowe firmy","Informacje organizacyjne","Dane dostępowe do systemów IT"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Cztery główne działania normy (Etapy planowania audytu):",
+    "opts": ["Planowanie","Wykonywanie","Raportowanie","Działania korygujące i zamknięcie"],
+    "correct": [0,1,2,3],
+    "noneCorrect": false
+  },
+  {
+    "q": "Postępowanie z ryzykiem może polegać na (Jeśli nie zostały uznane za ryzyko szczątkowe):",
+    "opts": [
+      "Wpływaniu na zmianę poziomu ryzyka poprzez zastosowanie zabezpieczenia",
+      "Unikaniu ryzyka",
+      "Przeniesieniu ryzyka",
+      "Akceptacji ryzyka mimo, że jego poziom przekracza poziom ryzyka szczątkowego"
+    ],
+    "correct": [0,1,2],
+    "noneCorrect": false
+  }
+];
+
+let cards = deepClone(cardsOriginal);
+let idx = 0;
+let backShown = false;
+
+const elCounter = document.getElementById("counter");
+const elTitle = document.getElementById("qTitle");
+const elQAnswers = document.getElementById("qAnswers");
+const elBack = document.getElementById("back");
+const elSpecial = document.getElementById("special");
+const elAAnswers = document.getElementById("aAnswers");
+const elToggle = document.getElementById("toggle");
+
+function render(){
+  const c = cards[idx];
+  elCounter.textContent = `${idx+1}/${cards.length}`;
+  elTitle.textContent = c.q;
+
+  elQAnswers.innerHTML = "";
+  c.opts.forEach((t,i)=>{
+    const li = document.createElement("li");
+    li.textContent = `${String.fromCharCode(97+i)}. ${t}`;
+    elQAnswers.appendChild(li);
+  });
+
+  // rewers
+  elAAnswers.innerHTML = "";
+  const allGreen = c.noneCorrect === true;
+  const correctSet = new Set(c.correct || []);
+  c.opts.forEach((t,i)=>{
+    const li = document.createElement("li");
+    const span = document.createElement("span");
+    span.textContent = `${String.fromCharCode(97+i)}. ${t}`;
+    if(allGreen || correctSet.has(i)) span.className = "green";
+    li.appendChild(span);
+    elAAnswers.appendChild(li);
+  });
+
+  elSpecial.textContent = c.noneCorrect ? "❌ BRAK POPRAWNEJ ODPOWIEDZI" : "";
+  elBack.style.display = backShown ? "block" : "none";
+  elToggle.textContent = backShown ? "Ukryj odpowiedź" : "Pokaż odpowiedź";
+}
+
+function next(){ backShown=false; idx=(idx+1)%cards.length; render(); }
+function prev(){ backShown=false; idx=(idx-1+cards.length)%cards.length; render(); }
+function toggle(){ backShown=!backShown; render(); }
+
+document.getElementById("next").onclick = next;
+document.getElementById("prev").onclick = prev;
+document.getElementById("toggle").onclick = toggle;
+
+document.getElementById("shuffle").onclick = ()=>{
+  backShown=false;
+  for(let i=cards.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [cards[i],cards[j]]=[cards[j],cards[i]];
+  }
+  idx=0; render();
+};
+
+document.getElementById("reset").onclick = ()=>{
+  backShown=false;
+  cards = deepClone(cardsOriginal);
+  idx=0; render();
+};
+
+window.addEventListener("keydown",(e)=>{
+  if(e.code==="Space"){ e.preventDefault(); toggle(); }
+  if(e.code==="ArrowRight"){ next(); }
+  if(e.code==="ArrowLeft"){ prev(); }
+});
+
+render();
+</script>
+</body>
+</html>
