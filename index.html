@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fiszki – test</title>
+  <title>Fiszki – pytania 1–99</title>
   <style>
     body{font-family:system-ui,Segoe UI,Arial;margin:24px;background:#0b1220;color:#e5e7eb}
     .wrap{max-width:900px;margin:0 auto}
@@ -12,16 +12,16 @@
     button{background:#1f2937;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:10px 14px;cursor:pointer}
     button:hover{background:#273449}
     .muted{color:#94a3b8}
-    .answers li{margin:6px 0}
     .green{color:#22c55e;font-weight:700}
     .tag{display:inline-block;padding:2px 10px;border:1px solid #334155;border-radius:999px;font-size:12px;color:#cbd5e1}
     .hr{height:1px;background:#243047;margin:14px 0}
+    .answerBox{white-space:pre-wrap;line-height:1.5}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <h2>Fiszki – test</h2>
-  <div class="muted">Zielone na rewersie = poprawne. Jeśli brak poprawnej: wszystkie zielone + etykieta „BRAK POPRAWNEJ”.</div>
+  <h2>Fiszki – pytania 1–99</h2>
+  <div class="muted">Awers: pytanie. Rewers: gotowa odpowiedź (zielona). Klawisze: [spacja]=odpowiedź, [←/→]=poprzednia/następna</div>
 
   <div class="hr"></div>
 
@@ -31,22 +31,20 @@
         <span class="tag" id="counter">0/0</span>
         <span class="tag" id="modeTag">TRYB: FISZKA</span>
       </div>
-      <div class="muted">klawisze: [spacja]=odpowiedź, [←/→]=poprzednia/następna</div>
+      <div class="muted">[spacja]=odpowiedź, [←/→]=poprzednia/następna</div>
     </div>
 
     <h3 id="qTitle" style="margin-top:12px"></h3>
-    <ul class="answers" id="qAnswers"></ul>
 
     <div id="back" style="display:none;margin-top:12px">
       <div class="hr"></div>
-      <div id="special" class="muted" style="margin-bottom:8px"></div>
-      <ul class="answers" id="aAnswers"></ul>
+      <div class="answerBox green" id="answer"></div>
     </div>
 
     <div class="row">
       <button id="toggle">Pokaż odpowiedź</button>
-      <button id="next">Następna</button>
       <button id="prev">Poprzednia</button>
+      <button id="next">Następna</button>
       <button id="shuffle">Losuj kolejność</button>
       <button id="reset">Reset kolejności</button>
     </div>
@@ -54,451 +52,112 @@
 </div>
 
 <script>
-/**
- * Deep clone kompatybilny z iOS/Safari:
- * - jeśli structuredClone jest dostępne, użyje go
- * - jeśli nie, użyje JSON (wystarcza dla tej tablicy obiektów)
- */
 function deepClone(obj){
   if (typeof structuredClone === "function") return structuredClone(obj);
   return JSON.parse(JSON.stringify(obj));
 }
 
-/**
- * Dane fiszek:
- * correct: tablica indeksów poprawnych odpowiedzi (0=a,1=b,...)
- * noneCorrect: true -> BRAK POPRAWNEJ (na rewersie wszystkie zielone + etykieta)
- */
+/* Fiszki 1–99 na podstawie pytania.pdf */
 const cardsOriginal = [
-  {
-    "q": "Klasyfikacja ryzyka — wskaż prawidłowe powiązania (klasa zagrożenia, działanie = rodzaj ryzyka)",
-    "opts": [
-      "Teleinfrastruktura; podsłuch linii = ryzyko aktywne",
-      "Wykonanie programów, infekcja wirusowa = ryzyko pasywne",
-      "Nośnik informacji; podmiana nośnika = ryzyko pasywne",
-      "Centrum komputerowe; pożar = ryzyko aktywne"
-    ],
-    "correct": [0,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Straty w wyniku pojawienia się potencjalnego incydentu determinują działania zabezpieczające. Wskaż prawidłowe ich przyporządkowanie dla systemów komputerowych (czego tyczą = typ strat)",
-    "opts": [
-      "Zawartość plików = bezpośrednie niematerialne",
-      "Utrata kontaktów = pośrednie materialne",
-      "Utrata marki = pośrednie materialne",
-      "Łącza komunikacyjne = bezpośrednie niematerialne"
-    ],
-    "correct": [0,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Do zasad projektowania mechanizmów ochrony informacji wg. Saltzera i Schroedera należy:",
-    "opts": [
-      "Mechanizm jawności projektu (np. algorytmy szyfrowania)",
-      "Mechanizm największego zbioru niezbędnych praw dostępu",
-      "Mechanizm największego uprzywilejowania",
-      "Mechanizm sumowania przywilejów"
-    ],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Wskaż cechę charakteryzującą audyt (typu) drugiej strony:",
-    "opts": [
-      "Audyt wg. Normy ISO 27001 (?)",
-      "Audyt wykonywany wobec klientów firmy",
-      "Audyt wykonywany przez niezależną jednostkę certyfikującą",
-      "Audyt wykonywany przez dostawców firmy //powinno być przez zleceniodawce"
-    ],
-    "correct": [3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Implementacja poprawna bezpieczeństwa polega na:",
-    "opts": [
-      "Stosowaniu wielu warstw zabezpieczeń",
-      "Określeniu najsłabszego ogniwa ochranianego systemu",
-      "Inwigilacji pracowników",
-      "Nie dążeniu do 100% zabezpieczeń zasobów // bo nie da się mieć 100% zabezpieczen"
-    ],
-    "correct": [0,1,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Sabotaż komputerowy jest typem zagrożenia polegającym na:",
-    "opts": [
-      "Wprowadzeniu błędnej informacji do systemu //zalezy czy celowo no i jest to uznawane za forme ataku wiec niewiadomo",
-      "Skanowaniu infrastruktury teleinformatyczneJ",
-      "Podsłuch infrastruktury teleinformatycznej",
-      "Nieuprawnionej zmianie informacji w systemie"
-    ],
-    "correct": [0,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Wskaż który z protokołów realizuje funkcje warstwy 3 modelu ISO/OSI",
-    "opts": ["UDP","TCP","OSPF","IP"],
-    "correct": [2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Wskaż prawidłową informację dotyczącą wirusów polimorficznych:",
-    "opts": [
-      "Infekują jedynie pliki systemowe",
-      "Nie powielają się",
-      "Powielają się dokładnie w kopiach infekujących komputery sieciowe",
-      "Zawierają dekryptor"
-    ],
-    "correct": [3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Wskaż kryteria cechujące poprawny audyt:",
-    "opts": ["Zależność","Drobiazgowość","Systematyczność","Udokumentowanie"],
-    "correct": [1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Listy kontrolne w procesie audytu to:",
-    "opts": [
-      "Lista osób kontrolujących obszary SZBI",
-      "Lista audytu",
-      "Lista kryteriów",
-      "Lista audytowanych działów firmy"
-    ],
-    "correct": [2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Do kategorii zagrożeń podsłuchiwanie i przechwytywanie danych należą podatności związane z:",
-    "opts": [
-      "Brakiem monitorowania obciążenia serwerów",
-      "Brakiem szkoleń wstępnych dla pracowników nowozatrudnionych",
-      "Brakiem szyfrowania na łączach WAN",
-      "Pozyskiwaniem informacji z nośników wycofanych z użycia"
-    ],
-    "correct": [2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "SZBI swoim działaniem obejmuje:",
-    "opts": [
-      "Zabezpieczenia fizyczne",
-      "Zarządzanie incydentami",
-      "Działania w obszarze zgodności z prawem",
-      "Zarządzanie zasobami ludzkimi"
-    ],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "System bezpieczeństwa powinien posiadać elementy:",
-    "opts": ["Element reaktywny","Element realny","Element proaktywny","Element ryzyka"],
-    "correct": [0,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Szacowanie ryzyka wg. Normy PN-ISO/IEC 27005:2014 polega na:",
-    "opts": ["Ocenie ryzyka","Identyfikacji ryzyka","Likwidacji ryzyka","Analizie ryzyka"],
-    "correct": [0,1,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Według normy PN-l-13335 występują związki elementów zarządzania ryzykiem polegające na:",
-    "opts": [
-      "Posiadana informacja w systemie nie wpływa na wartość ryzyka",
-      "Zagrożenie zwiększa ryzyko, które wpływa na wartość posiadanej informacji",
-      "Podatność zwiększa wartość ryzyka, które wymusza implementację zabezpieczenia",
-      "Implementacje zabezpieczeń redukują podatności systemu"
-    ],
-    "correct": [1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Dopuszczalne wielkości opóźnień dla sieci naziemnych przesyłających usługę głosu to:",
-    "opts": ["Jednokierunkowo 250ms","Jednokierunkowo 200ms","Jednokierunkowo 150ms","Jednokierunkowo 200ms"],
-    "correct": [2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "QoS definiowane jest jako:",
-    "opts": [
-      "Efekt sprawności wykonywania usługi, wyznaczony poziomem zadowolenia użytkownika // to jest najblizsze definicji",
-      "Efekt sprawności wykonywania usługi, wyznaczony poziomem zadowolenia operatora",
-      "Globalny efekt wykonania usługi",
-      "Lokalny efekt wykonania usługi"
-    ],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Parametry QoS opracowane przez ISO:",
-    "opts": ["Opóźnienie tranzytowe","Opóźnienie komutacji","Opóźnienie transmisji","Opóźnienie zestawienia połączeń"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zasada integracji (QOS):",
-    "opts": [
-      "Zapewnia pełną jakość usługi (End to End)",
-      "Jest przewidywalna w efektach działania //to cel stosowania QoS, a nie definicja zasady integracji.",
-      "QoS musi być nie konfigurowalne",
-      "Synchronizuje strumienie wykonawcze"
-    ],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Do specyfikacji QoS może należeć:",
-    "opts": ["Zasada wielodostępu czasowego","Koszt usługi","Poziom obsługi","Zasada separacji"],
-    "correct": [1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Szeregowanie strumienia usługi należy do:",
-    "opts": ["Zasad tworzenia QoS","Parametrów QoS wg. ISO","Mechanizmów dostarczania QoS","Specyfikacji QoS"],
-    "correct": [2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zarządzanie warstwą fizyczną w 802.11 jest realizowane między innymi poprzez dobór:",
-    "opts": ["FHSS (2GFSK)","DSSS (FM)","OFDM (QAM)","OFDM (2GFSK)"],
-    "correct": [2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zarządzanie jakością QoS w standardzie 802.11 jest określone w:",
-    "opts": ["802.11d","802.11e","802.11f","802.11g"],
-    "correct": [1],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zarządzanie bezpieczeństwem w standardzie 802.11 jest realizowane przez:",
-    "opts": ["Autoryzacje WEP","Szyfrowanie WPA","EAP [znane potocznie jako RADIUS]","SEP"],
-    "correct": [2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zarządzanie bezpieczeństwem sieci informatycznej może być realizowane za pomocą:",
-    "opts": [
-      "Portów na poziome warstwy 3 modelu ISO/OSI",
-      "Adresów MAC warstwy 1 modelu ISO/OSI",
-      "Adresów IP warstwy 3 ISO/OSI",
-      "Adresów IP warstwy 4 ISO/OSI"
-    ],
-    "correct": [2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Niezagrożony system posiada elementy:",
-    "opts": ["Element reaktywny","Element realny","Element proaktywny","Element ryzyka"],
-    "correct": [0,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Dobre praktyki bezpieczeństwa polegają na:",
-    "opts": ["Inwigilacji pracowników","Warstwowym systemie zabezpieczeń","Nie dążeniu do 100% bezpieczeństwa","Określeniu najsłabszego ogniwa systemu"],
-    "correct": [1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Czym zajmuję się kryptologia:",
-    "opts": ["Kryptografia","Kryptoanaliza"],
-    "correct": [0,1],
-    "noneCorrect": false
-  },
-  {
-    "q": "Czym zajmuje się Kryptoanaliza:",
-    "opts": ["Metodami łamania szyfrów"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Czym zajmuje się kryptografia:",
-    "opts": ["Utajnionym zapisem informacji"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "System kryptograficzny posiada następujące cechy:",
-    "opts": ["Poufność","Autentyfikację","Niezaprzeczalność nadania","Dostarczenie informacji"],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Która z norm nie dotyczy informatyki:",
-    "opts": ["22000 — bezpieczeństwo żywności"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Wirusy polimorficzne",
-    "opts": ["Posiadają dekryptor","Dzielą się"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Bezpieczeństwo jako ciągły proces:",
-    "opts": ["Monitorowanie Testowanie Ulepszanie Zabezpieczenie"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Dane wrażliwe według ustawy dotyczą:",
-    "opts": ["Stanu zdrowia","Kodu genetycznego","Nałogów","Życia seksualnego"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Entropia w teorii informacji jest:",
-    "opts": ["Nieujemna","Maksymalna, gdy prawdopodobieństwa zdarzeń są takie same","Jest równa O, gdy stany systemów przyJmują wartości tylko O lub tylko 1"],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zadania do wykonania w procesie audytu informatycznego:",
-    "opts": ["Zapoznanie się z audytowanym obszarem","Szczegółowe planowanie audytu","Przeprowadzenie szczegółowych prac audytowych","Ocena zaplanowanych i przewidzianych mechanizmów"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Cechy audytu:",
-    "opts": ["Systematyczny","Niezależny","Udokumentowany"],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Kanał z zniekształceniami:",
-    "opts": ["Informacja","Subiektywizm przekazu informacji","Informacja zniekształcona"],
-    "correct": [1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "RSA— Jaki klucz ma nadawca i odbiorca:",
-    "opts": ["Nadawca - publiczny","Odbiorca — tajny przy deszyfrowaniu"],
-    "correct": [0,1],
-    "noneCorrect": false
-  },
-  {
-    "q": "Normy SZBI: PN-ISO/IEC 27001",
-    "opts": ["Technika informatyczna Techniki bezpieczeństwa Systemy zarządzania bezpieczeństwem informacji Wymagania"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Normy SZBI: PN-ISO/IEC 17799 (ISO 27002)",
-    "opts": ["Technika informatyczna Techniki bezpieczeństwa -> Praktyczne zasady zarządzania bezpieczeństwem informacji"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Ataki pasywne polegają na:",
-    "opts": ["Podsłuchiwaniu lub monitorowaniu przesyłania","Celem osoby atakującej jest odkrycie treści komunikatu"],
-    "correct": [0,1],
-    "noneCorrect": false
-  },
-  {
-    "q": "Ataki pasywne dzielą się na (dwa typy):",
-    "opts": ["Odkrycie treści komunikatu","Analiza przesyłu"],
-    "correct": [0,1],
-    "noneCorrect": false
-  },
-  {
-    "q": "Ataki aktywne polegają na:",
-    "opts": ["Modyfikowaniu strumienia danych lub tworzeniu danych fałszywych"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Ataki aktywne dzielą się na (cztery typy):",
-    "opts": ["Maskarada","Powtórka","Modyfikacja komunikatów","Blokowanie działania"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Atrybuty bezpieczeństwa informacji to:",
-    "opts": ["Poufność","Integralność","Dostępność"],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Rodzaje list kontrolnych to:",
-    "opts": ["Lista kryteriów","Lista audytów"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Klasyfikacja informacji:",
-    "opts": ["Poufne","Do użytku wewnętrznego","Publiczne"],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Norma BS 25999",
-    "opts": ["System zarządzania ciągłością działania"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Norma ISO/IEC 27005",
-    "opts": ["Zarządzanie ryzykiem w systemie informacji"],
-    "correct": [0],
-    "noneCorrect": false
-  },
-  {
-    "q": "Rodzaje audytów",
-    "opts": ["Audyt pierwszej strony (wewnętrzny)","Audyt drugiej strony","Audyt trzeciej strony"],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  },
-  {
-    "q": "Zagadnienia będące przedmiotem naszych rozważań mają punkty styczności z takimi dziedzinami jak np.:",
-    "opts": ["Niezawodność","Analiza ryzyka","Przestępczość komputerowa","Kryptologia"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Fundamentalne reguły socjotechniczne:",
-    "opts": ["Reguła wzajemności","Reguła konsekwencji","Reguła dowodu społecznego","Reguła sympatii"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Słabe punkty systemy obiegu informacji:",
-    "opts": ["Zbiory","Urządzenia","Oprogramowanie","Operator"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Entropia w teorii informacji:",
-    "opts": ["Miara nieokreślona","Chaotyczność","Stopień nieuporządkowania","Stan nieuporządkowania"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Informacje poufne:",
-    "opts": ["Informacje o realizowanych kontraktach","Informacje finansowe firmy","Informacje organizacyjne","Dane dostępowe do systemów IT"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Cztery główne działania normy (Etapy planowania audytu):",
-    "opts": ["Planowanie","Wykonywanie","Raportowanie","Działania korygujące i zamknięcie"],
-    "correct": [0,1,2,3],
-    "noneCorrect": false
-  },
-  {
-    "q": "Postępowanie z ryzykiem może polegać na (Jeśli nie zostały uznane za ryzyko szczątkowe):",
-    "opts": [
-      "Wpływaniu na zmianę poziomu ryzyka poprzez zastosowanie zabezpieczenia",
-      "Unikaniu ryzyka",
-      "Przeniesieniu ryzyka",
-      "Akceptacji ryzyka mimo, że jego poziom przekracza poziom ryzyka szczątkowego"
-    ],
-    "correct": [0,1,2],
-    "noneCorrect": false
-  }
+  { q:"1. Do czego służy kompilator?", a:"Kompilator tłumaczy kod źródłowy napisany w języku wysokiego poziomu na kod maszynowy lub pośredni. Proces kompilacji obejmuje analizę leksykalną, składniową, semantyczną oraz generowanie kodu wynikowego. Efektem jest plik wykonywalny lub kod pośredni gotowy do uruchomienia." },
+  { q:"2. Jak działa interpreter?", a:"Interpreter wykonuje program linia po linii bez wcześniejszego tworzenia pliku wykonywalnego. Ułatwia debugowanie, ale działa wolniej niż program skompilowany. Przykładem języka interpretowanego jest Python." },
+  { q:"3. Co to są słowa kluczowe języka programowania?", a:"Słowa kluczowe to zarezerwowane wyrazy o specjalnym znaczeniu w danym języku. Nie mogą być używane jako nazwy zmiennych ani funkcji. Przykłady to if, while, class." },
+  { q:"4. Jakie znasz typy zmiennych?", a:"Typy zmiennych określają rodzaj przechowywanych danych. Przykładami są typy liczbowe, tekstowe i logiczne. W języku C# są to m.in. int, string, bool." },
+  { q:"5. Czy istnieją systemy nadawania nazw zmiennym?", a:"Tak, nazywa się je konwencjami nazewniczymi. Przykładami są camelCase, PascalCase i snake_case. Poprawiają czytelność i spójność kodu." },
+  { q:"6. Jakie znasz funkcje systemu operacyjnego?", a:"System operacyjny zarządza procesami, pamięcią oraz urządzeniami wejścia-wyjścia. Zapewnia interfejs użytkownika i bezpieczeństwo danych. Umożliwia także komunikację między aplikacjami." },
+  { q:"7. Do czego służy logiczna organizacja pamięci?", a:"Logiczna organizacja pamięci abstrahuje fizyczne rozmieszczenie danych. Ułatwia programom dostęp do pamięci poprzez adresy logiczne. Stosowane są m.in. segmentacja i stronicowanie." },
+  { q:"8. Fizyczna organizacja pamięci", a:"Fizyczna organizacja pamięci dotyczy rzeczywistego rozmieszczenia danych w RAM. System mapuje adresy logiczne na fizyczne. Zapewnia to ochronę i efektywne wykorzystanie pamięci." },
+  { q:"9. Systemy plików w Linuxie", a:"Linux wykorzystuje m.in. ext4, XFS oraz Btrfs. Różnią się wydajnością i odpornością na awarie. Obsługują prawa dostępu i strukturę katalogów." },
+  { q:"10. Systemy plików Windows", a:"Windows stosuje systemy FAT32, NTFS i exFAT. NTFS obsługuje prawa dostępu i szyfrowanie. FAT32 jest prostszy, ale ma ograniczenia rozmiaru plików." },
+  { q:"11. Proces a wątek", a:"Proces jest niezależną jednostką wykonawczą z własną pamięcią. Wątek działa wewnątrz procesu i współdzieli jego zasoby. Wątki są lżejsze niż procesy." },
+  { q:"12. Modele wielowątkowości", a:"Występują modele jeden-do-jednego, wiele-do-jednego oraz wiele-do-wielu. Różnią się wydajnością i stopniem kontroli jądra. Najczęściej stosowany jest model jeden-do-jednego." },
+  { q:"13. Bramki logiczne", a:"Podstawowe bramki to AND, OR, NOT, NAND i NOR. Każda posiada określoną tabelę prawdy. Opisują one podstawowe operacje logiczne." },
+  { q:"14. Właściwości układu kombinacyjnego", a:"Wyjście zależy tylko od aktualnych wejść. Układ nie posiada pamięci. Przykładem jest sumator binarny." },
+  { q:"15. Układ sekwencyjny", a:"Układ sekwencyjny zależy od wejść i stanu poprzedniego. Zawiera elementy pamięci, np. przerzutniki. Przykładem jest licznik." },
+  { q:"16. Tabela prawdy", a:"Tabela prawdy pokazuje wszystkie możliwe kombinacje wejść i odpowiadające im wyjścia. Służy do analizy układów logicznych. Przykładem jest tabela dla bramki AND." },
+  { q:"17. Algebra Boole’a", a:"Algebra Boole’a opisuje operacje logiczne. Funkcje zapisuje się za pomocą operatorów AND, OR, NOT. Przykładem jest: F = A AND (B OR C)." },
+  { q:"18. Transmisja synchroniczna", a:"Transmisja synchroniczna wykorzystuje wspólny sygnał zegarowy. Dane są przesyłane w stałych odstępach czasu. Stosowana jest np. w magistralach systemowych." },
+  { q:"19. Transmisja asynchroniczna", a:"Nie wymaga wspólnego zegara. Każdy znak przesyłany jest osobno z bitami startu i stopu. Przykładem jest transmisja UART." },
+  { q:"20. Rodzaje baz danych", a:"Bazy danych dzielą się m.in. na relacyjne i nierelacyjne. Kryterium podziału jest sposób przechowywania danych. Przykładami są MySQL i MongoDB." },
+  { q:"21. Model ERD", a:"Model ERD przedstawia encje, atrybuty i związki. Określa relacje między danymi. Stosowany jest w projektowaniu baz danych." },
+  { q:"22. Operacje w modelu relacyjnym", a:"Podstawowe operacje to selekcja, projekcja i złączenia. Realizowane są za pomocą języka SQL. Pozwalają manipulować danymi w tabelach." },
+  { q:"23. Operatory SQL", a:"SQL zawiera operatory logiczne i porównania. Przykładami są WHERE, AND, OR. Umożliwiają filtrowanie danych." },
+  { q:"24. Operacje grupowania SQL", a:"Grupowanie służy do agregacji danych. Wykorzystuje się klauzulę GROUP BY. Stosowane jest np. przy liczeniu średnich i sum." },
+  { q:"25. Integralność danych", a:"Integralność danych oznacza ich poprawność i spójność. Zapewniają ją klucze i ograniczenia. Przykładem jest klucz główny." },
+  { q:"26. Rozproszone bazy danych", a:"Rozproszone bazy przechowują dane na wielu serwerach. Zwiększają dostępność i skalowalność. Przykładem jest Cassandra." },
+  { q:"27. Grafika wektorowa", a:"Pliki wektorowe zapisują obiekty matematyczne. Umożliwiają skalowanie bez utraty jakości. Przykłady to SVG i AI." },
+  { q:"28. Co wyroznia grafike rastrowa?", a:"Grafika rastrowa sklada sie z pikseli ulozonych w siatke. Jakosc obrazu zalezy od jego rozdzielczosci. Przyklady formatow grafiki rastrowej to JPG, PNG oraz BMP." },
+  { q:"29. Modelowanie oswietlenia w grafice", a:"Oswietlenie modeluje sie za pomoca modeli matematycznych. Najczesciej stosuje sie model Phonga oraz Gourauda. Pozwala to uzyskac realistyczne cienie i odbicia swiatla." },
+  { q:"30. Modelowanie bryl i powierzchni", a:"Bryly i powierzchnie modeluje sie za pomoca siatek wielokatow. W grafice stosuje sie rowniez krzywe Beziera i NURBS. Metody te pozwalaja na dokladne odwzorowanie ksztaltow obiektow." },
+  { q:"31. Swiatlo i barwa w grafice", a:"Barwe opisuje sie przy uzyciu modeli RGB oraz HSV. Swiatlo symuluje sie poprzez okreslenie natezenia i kierunku. Ma to bezposredni wplyw na kolor i wyglad cieni obiektow." },
+  { q:"32. Przeksztalcenia 2D i 3D", a:"Przeksztalcenia w grafice opisuje sie za pomoca macierzy. Obejmuja one translacje, skalowanie oraz obroty. Sa powszechnie stosowane w grafice komputerowej 2D i 3D." },
+  { q:"33. Warstwy modelu OSI", a:"Model OSI sklada sie z siedmiu warstw. Kazda warstwa realizuje okreslone funkcje komunikacyjne. Model ten ulatwia projektowanie i analize sieci." },
+  { q:"34. Model TCP/IP", a:"Model TCP/IP sluzy do komunikacji w sieciach komputerowych. Sklada sie z czterech warstw funkcjonalnych. Stanowi podstawe dzialania Internetu." },
+  { q:"35. Rola routera", a:"Router przekazuje pakiety danych pomiedzy roznymi sieciami. Dziala glownie w warstwie sieciowej modelu OSI. Obsluguje protokoly routingu." },
+  { q:"36. Protokoly routingu", a:"Protokoly routingu wyznaczaja optymalna droge przesylu danych. Dzialaja na podstawie metryk takich jak koszt lub odleglosc. Przykladem protokolu routingu jest OSPF." },
+  { q:"37. Elementy sieci", a:"Elementy aktywne sieci to m.in. routery i przelaczniki. Elementy pasywne to kable, gniazda oraz patchpanele. Wspolnie tworza infrastrukture sieciowa." },
+  { q:"38. Zasada dzialania DNS", a:"DNS tlumaczy nazwy domenowe na adresy IP. Ulatwia to korzystanie z sieci Internet. System DNS dziala w architekturze klient-serwer." },
+  { q:"39. Rola bramy sieciowej", a:"Brama sieciowa laczy rozne sieci lub protokoly. Umozliwia komunikacje z siecia zewnetrzna. Czesto pelni role routera domyslnego." },
+  { q:"40. TCP a UDP", a:"TCP zapewnia niezawodna i uporzadkowana transmisje danych. UDP jest szybszy, ale nie gwarantuje dostarczenia pakietow. TCP stosuje sie np. w WWW, a UDP w streamingu." },
+  { q:"41. Uslugi sieciowe", a:"DHCP automatycznie przydziela adresy IP urzadzeniom. FTP sluzy do przesylania plikow. WWW umozliwia przegladanie stron internetowych." },
+  { q:"42. Protokoly sieciowe", a:"HTTP sluzy do przesylania stron WWW. SMTP, POP3 i IMAP obsluguja poczte elektroniczna. FTP umozliwia transfer plikow w sieci." },
+  { q:"43. Adresacja IPv4", a:"IPv4 wykorzystuje adresy 32-bitowe. Adres sklada sie z czesci sieciowej oraz czesci hosta. Do podzialu stosuje sie maski podsieci." },
+  { q:"44. Uzyskiwanie adresu IPv6", a:"IPv6 oferuje znacznie wieksza pule adresow niz IPv4. Adres moze byc nadany automatycznie przez siec. Stosuje sie mechanizm SLAAC." },
+  { q:"45. Analiza algorytmu sortowania", a:"Algorytmy sortowania analizuje sie pod katem zlozonosci obliczeniowej. Uwzglednia sie czas oraz zuzycie pamieci. Przykladem jest analiza sortowania szybkiego." },
+  { q:"46. Zlozonosc problemu", a:"Zlozonosc problemu okresla zasoby potrzebne do jego rozwiazania. Najczesciej stosuje sie notacje O. Przyklady klas zlozonosci to O(n) oraz O(n^2)." },
+  { q:"47. Algorytmy sortujace", a:"Algorytmy sortujace porzadkuja dane wedlug okreslonego kryterium. Przykladami sa bubble sort oraz quicksort. Sa czesto wykorzystywane w bazach danych." },
+  { q:"48. Algorytmy wyszukujace", a:"Algorytmy wyszukujace sluza do odnajdywania elementow w zbiorze danych. Przykladem jest wyszukiwanie binarne. Wymaga ono wczesniejszego posortowania danych." },
+  { q:"49. Metody projektowania algorytmow", a:"Jedna z metod jest podejscie dziel i zwyciezaj. Inna metoda to programowanie dynamiczne. Pomagaja one rozwiazywac zlozone problemy algorytmiczne." },
+  { q:"50. Typy kolejek", a:"Kolejka FIFO dziala na zasadzie pierwszy wszedl pierwszy wyszedl. Stos jest struktura typu LIFO. Obie struktury sa powszechnie uzywane w algorytmach." },
+  { q:"51. Test Turinga", a:"Test Turinga sluzy do oceny inteligencji maszyny. Polega na prowadzeniu rozmowy z czlowiekiem. Jesli maszyna jest nierozroznialna, test uznaje sie za zdany." },
+  { q:"52. Zastosowania kryptografii", a:"Kryptografia chroni dane przed nieuprawnionym dostepem. Jest stosowana w bankowosci i systemach platnosci. Wykorzystuje sie ja rowniez w komunikacji sieciowej." },
+  { q:"53. Hermetyzacja danych", a:"Hermetyzacja polega na ukrywaniu danych obiektu. Dostep do nich odbywa sie przez metody. Zwieksza to bezpieczenstwo i stabilnosc kodu." },
+  { q:"54. Polimorfizm", a:"Polimorfizm umozliwia rozne zachowanie tej samej metody. Zalezy ono od typu obiektu. Jest jedna z podstawowych cech OOP." },
+  { q:"55. Wzorce kreatywne", a:"Wzorce kreatywne dotycza sposobow tworzenia obiektow. Przykladem jest wzorzec Singleton. Ulatwiaja one zarzadzanie instancjami klas." },
+  { q:"56. Wzorce strukturalne", a:"Wzorce strukturalne opisuja strukture klas i obiektow. Przykladem jest wzorzec Adapter. Pomagaja laczyc rozne komponenty systemu." },
+  { q:"57. Wzorce czynnosciowe", a:"Wzorce czynnosciowe opisuja komunikacje miedzy obiektami. Przykladem jest wzorzec Observer. Umozliwia on reagowanie na zmiany stanu." },
+  { q:"58. Synchronizacja watkow", a:"Synchronizacja zapobiega jednoczesnemu dostepowi do zasobow. Stosuje sie mechanizmy takie jak semafory i mutexy. Zapewnia to poprawnosc dzialania aplikacji." },
+  { q:"59. Wyrazenia regularne", a:"Wyrazenia regularne sluza do przetwarzania tekstu. Umozliwiaja wyszukiwanie oraz walidacje danych. Przykladem jest wzorzec [0-9]+." },
+  { q:"60. Bazy danych NoSQL", a:"Bazy NoSQL stosuje sie przy bardzo duzych zbiorach danych. Oferuja wysoka skalowalnosc i elastycznosc. Przykladem bazy NoSQL jest MongoDB." },
+  { q:"61. Programowanie funkcyjne", a:"Programowanie funkcyjne opiera sie na funkcjach. Unika sie w nim zmiennych stanu. Przykladem jezyka funkcyjnego jest Haskell." },
+  { q:"62. Wyjatki", a:"Wyjatki sluza do obslugi bledow w programie. Pozwalaja uniknac naglego zakonczenia aplikacji. Najczesciej stosuje sie bloki try-catch." },
+  { q:"63. Interfejs a klasa abstrakcyjna", a:"Interfejs zawiera tylko deklaracje metod. Klasa abstrakcyjna moze zawierac implementacje metod. Oba mechanizmy sluza do dziedziczenia." },
+  { q:"64. Wskaznik i referencja", a:"Wskaznik przechowuje adres pamieci zmiennej. Referencja jest aliasem istniejacej zmiennej. Roznia sie skladnia i sposobem uzycia." },
+  { q:"65. Dziedziczenie", a:"Dziedziczenie pozwala tworzyc klasy potomne. Klasa potomna przejmuje cechy klasy bazowej. Ulatwia to ponowne wykorzystanie kodu." },
+  { q:"66. Konstruktory i destruktory", a:"Konstruktor sluzy do inicjalizacji obiektu. Destruktor zwalnia zajete zasoby. Oba wywolywane sa automatycznie." },
+  { q:"67. Anonimowa klasa", a:"Anonimowa klasa nie posiada nazwy. Jest uzywana lokalnie w kodzie. Ulatwia szybkie tworzenie prostych implementacji." },
+  { q:"68. Gniazda sieciowe", a:"Gniazda sieciowe umozliwiaja komunikacje miedzy aplikacjami. Stosowane sa w architekturze klient-serwer. Przykladem jest aplikacja typu chat." },
+  { q:"69. Tworzenie polaczenia sieciowego", a:"Klient tworzy gniazdo i nawiazuje polaczenie z serwerem. Serwer nasluchuje polaczen przychodzacych. Nastepuje wymiana danych miedzy stronami." },
+  { q:"70. Gniazda TCP i UDP", a:"Gniazda TCP zapewniaja niezawodnosc polaczenia. UDP dziala bezpolaczeniowo. Roznia sie sposobem przesylania danych." },
+  { q:"71. Testy jednostkowe", a:"Testy jednostkowe sprawdzaja pojedyncze funkcje lub metody. Pozwalaja szybko wykryc bledy. Najczesciej sa wykonywane automatycznie." },
+  { q:"72. Testy integracyjne", a:"Testy integracyjne sprawdzaja wspoldzialanie modulow. Wykonywane sa po testach jednostkowych. Zapewniaja poprawna integracje systemu." },
+  { q:"73. RESTful Webservices", a:"REST opiera sie na protokole HTTP. Wykorzystuje metody takie jak GET i POST. Dane przesylane sa najczesciej w formacie JSON." },
+  { q:"74. Format JSON", a:"JSON to lekki format wymiany danych. Jest czytelny dla czlowieka i maszyny. Czesto stosowany jest w aplikacjach webowych." },
+  { q:"75. Kontrola wersji", a:"Kontrola wersji pozwala sledzic zmiany w kodzie. Ulatwia prace zespolowa. Popularnym narzedziem jest Git." },
+  { q:"76. Programowanie zwinne", a:"Programowanie zwinne stawia na elastycznosc i iteracje. Zaklada czeste dostarczanie dzialajacego oprogramowania. Przykladem metodyki jest Scrum." },
+  { q:"77. Cykl zycia oprogramowania", a:"Cykl zycia oprogramowania obejmuje analize, projektowanie i testy. Zapewnia uporzadkowany proces tworzenia systemu. Istnieje wiele modeli cyklu zycia." },
+  { q:"78. Kontenery aplikacyjne", a:"Kontenery izolują aplikacje od systemu. Ulatwiaja wdrazanie i skalowanie. Przykladem technologii kontenerowej jest Docker." },
+  { q:"79. Klasa a obiekt", a:"Klasa jest wzorcem obiektu. Obiekt jest instancja klasy. Obiekty posiadaja stan oraz metody." },
+  { q:"80. Metoda a funkcja", a:"Metoda jest zwiazana z klasa. Funkcja moze istniec niezaleznie. Roznia sie zakresem zastosowania." },
+  { q:"81. Przeciazanie metod", a:"Przeciazanie pozwala uzywac tej samej nazwy metody. Rozne sa typy lub liczba parametrow. Zwieksza to czytelnosc kodu." },
+  { q:"82. UML", a:"UML sluzy do modelowania systemow informatycznych. Wykorzystuje rozne typy diagramow. Ulatwia projektowanie aplikacji." },
+  { q:"83. API", a:"API to interfejs programistyczny aplikacji. Umozliwia komunikacje miedzy systemami. Jest powszechnie stosowane w aplikacjach webowych." },
+  { q:"84. Kompresja obrazow", a:"Kompresja obrazow zmniejsza rozmiar pliku. Moze byc stratna lub bezstratna. Przykladami sa JPEG oraz PNG." },
+  { q:"85. Systemy ekspertowe", a:"Systemy ekspertowe nasladuja decyzje czlowieka. Stosowane sa m.in. w medycynie. Oparte sa na bazie wiedzy." },
+  { q:"86. Systemy wspomagania decyzji", a:"Systemy DSS analizuja dane decyzyjne. Pomagaja w podejmowaniu decyzji. Sa stosowane w biznesie i zarzadzaniu." },
+  { q:"87. Wnioskowanie w AI", a:"Wnioskowanie polega na wyciaganiu wnioskow z wiedzy. Stosuje sie metody logiczne. Przykladem jest wnioskowanie dedukcyjne." },
+  { q:"88. Logiczne metody reprezentacji wiedzy", a:"Wiedze zapisuje sie w postaci regul logicznych. Stosuje sie logike predykatow. Umozliwia to automatyczne wnioskowanie." },
+  { q:"89. Reprezentacja wiedzy w AI", a:"Wiedze reprezentuje sie za pomoca grafow i ram. Stosuje sie rowniez sieci semantyczne. Pozwala to odwzorowac relacje miedzy pojeciami." },
+  { q:"90. Podstawowe pojecia AI", a:"Sztuczna inteligencja zajmuje sie symulacja inteligencji czlowieka. Obejmuje uczenie oraz wnioskowanie. Znajduje zastosowanie w wielu dziedzin." },
+  { q:"91. Sztuczna siec neuronowa", a:"Sztuczna siec neuronowa sklada sie z neuronow. Uczy sie na podstawie danych wejsciowych. Stosowana jest w rozpoznawaniu obrazow." },
+  { q:"92. Metody uczenia sieci", a:"Uczenie moze byc nadzorowane lub nienadzorowane. Wykorzystuje sie zbiory danych treningowych. Celem jest minimalizacja bledu." },
+  { q:"93. Jezyki skryptowe", a:"Jezyki skryptowe sa interpretowane. Ulatwiaja szybkie tworzenie aplikacji. Przykladem jest JavaScript." },
+  { q:"94. Poprawa jakosci obrazu", a:"Jakosc obrazu poprawia sie za pomoca filtrow. Stosuje sie wyostrzanie i odszumianie. Wykorzystuje sie algorytmy cyfrowe." },
+  { q:"95. Architektura klient-serwer", a:"Klient wysyla zapytania do serwera. Serwer przetwarza dane i zwraca odpowiedz. Model ten dominuje w sieciach komputerowych." },
+  { q:"96. Wykrywanie krawedzi", a:"Wykrywanie krawedzi polega na analizie zmian jasnosci obrazu. Stosuje sie filtry Sobela i Prewitta. Metoda ta wykorzystywana jest w wizji komputerowej." },
+  { q:"97. Transformata Fouriera", a:"Transformata Fouriera analizuje sygnaly. Przenosi je do dziedziny czestotliwosci. Jest stosowana w przetwarzaniu obrazu i sygnalow." },
+  { q:"98. Splot w dziedzinie czasu", a:"Splot laczy sygnaly w dziedzinie czasu. Jest stosowany w filtracji sygnalow. Opisuje reakcje ukladu na sygnal." },
+  { q:"99. Splot w dziedzinie czestotliwosci", a:"Splot w dziedzinie czestotliwosci odpowiada mnozeniu widm. Upraszcza obliczenia numeryczne. Jest wykorzystywany w analizie sygnalow." }
 ];
 
 let cards = deepClone(cardsOriginal);
@@ -507,10 +166,8 @@ let backShown = false;
 
 const elCounter = document.getElementById("counter");
 const elTitle = document.getElementById("qTitle");
-const elQAnswers = document.getElementById("qAnswers");
 const elBack = document.getElementById("back");
-const elSpecial = document.getElementById("special");
-const elAAnswers = document.getElementById("aAnswers");
+const elAnswer = document.getElementById("answer");
 const elToggle = document.getElementById("toggle");
 
 function render(){
@@ -518,27 +175,8 @@ function render(){
   elCounter.textContent = `${idx+1}/${cards.length}`;
   elTitle.textContent = c.q;
 
-  elQAnswers.innerHTML = "";
-  c.opts.forEach((t,i)=>{
-    const li = document.createElement("li");
-    li.textContent = `${String.fromCharCode(97+i)}. ${t}`;
-    elQAnswers.appendChild(li);
-  });
+  elAnswer.textContent = c.a || "(brak odpowiedzi)";
 
-  // rewers
-  elAAnswers.innerHTML = "";
-  const allGreen = c.noneCorrect === true;
-  const correctSet = new Set(c.correct || []);
-  c.opts.forEach((t,i)=>{
-    const li = document.createElement("li");
-    const span = document.createElement("span");
-    span.textContent = `${String.fromCharCode(97+i)}. ${t}`;
-    if(allGreen || correctSet.has(i)) span.className = "green";
-    li.appendChild(span);
-    elAAnswers.appendChild(li);
-  });
-
-  elSpecial.textContent = c.noneCorrect ? "❌ BRAK POPRAWNEJ ODPOWIEDZI" : "";
   elBack.style.display = backShown ? "block" : "none";
   elToggle.textContent = backShown ? "Ukryj odpowiedź" : "Pokaż odpowiedź";
 }
