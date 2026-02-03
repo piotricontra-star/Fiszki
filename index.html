@@ -70,7 +70,7 @@ const cardsOriginal = [
   { q:"9. Systemy plików w Linuxie", a:"Linux wykorzystuje m.in. ext4, XFS oraz Btrfs. Różnią się wydajnością i odpornością na awarie. Obsługują prawa dostępu i strukturę katalogów." },
   { q:"10. Systemy plików Windows", a:"Windows stosuje systemy FAT32, NTFS i exFAT. NTFS obsługuje prawa dostępu i szyfrowanie. FAT32 jest prostszy, ale ma ograniczenia rozmiaru plików." },
   { q:"11. Proces a wątek", a:"Proces jest niezależną jednostką wykonawczą z własną pamięcią. Wątek działa wewnątrz procesu i współdzieli jego zasoby. Wątki są lżejsze niż procesy." },
-  { q:"12. Modele wielowątkowości", a:"Występują modele jeden-do-jednego, wiele-do-jednego oraz wiele-do-wielu. Różnią się wydajnością i stopniem kontroli jądra. Najczęściej stosowany jest model jeden-do-jednego." },
+  { q:"12. Modele wielowątkowości", a:"Występują modele jeden-do-jednego, wiele-do-jednego oraz wiele-do-wielu. Model wiele-do-jednego ma mały narzut, ale blokada jednego wątku blokuje wszystkie. Model jeden-do-jednego daje dobrą wydajność i równoległość, ale zwiększa narzut systemowy.Model wiele-do-wielu jest elastyczny, lecz bardziej złożony w implementacji." },
   { q:"13. Bramki logiczne", a:"Podstawowe bramki to AND, OR, NOT, NAND i NOR. Każda posiada określoną tabelę prawdy. Opisują one podstawowe operacje logiczne." },
   { q:"14. Właściwości układu kombinacyjnego", a:"Wyjście zależy tylko od aktualnych wejść. Układ nie posiada pamięci. Przykładem jest sumator binarny." },
   { q:"15. Układ sekwencyjny", a:"Układ sekwencyjny zależy od wejść i stanu poprzedniego. Zawiera elementy pamięci, np. przerzutniki. Przykładem jest licznik." },
@@ -214,3 +214,4 @@ render();
 </script>
 </body>
 </html>
+
